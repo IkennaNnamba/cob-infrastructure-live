@@ -1,0 +1,20 @@
+# Local .terraform directories
+**/.terraform/*
+
+# Terraform state files - we use remote S3 backend, these should never be local/committed
+*.tfstate
+*.tfstate.*
+
+# Crash logs
+crash.log
+crash.*.log
+
+# Exclude override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Ignore CLI configuration files
+.terraformrc
+terraform.rc
