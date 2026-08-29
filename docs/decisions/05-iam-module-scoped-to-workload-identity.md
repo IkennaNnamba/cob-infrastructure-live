@@ -1,4 +1,4 @@
-# 0005: IAM module scoped to workload identity only
+# 05: IAM module scoped to workload identity only
 
 ## Decision
 The IAM module creates roles for AWS services to assume (EC2, ECS, etc.) only.
