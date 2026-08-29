@@ -1,4 +1,4 @@
-# 0006: One state file per team per environment, not per component
+# 06: One state file per team per environment, not per component
 
 ## Decision
 Leaf directories (where Terraform state lives) are organized as one per
