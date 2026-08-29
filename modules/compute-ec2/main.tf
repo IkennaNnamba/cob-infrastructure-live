@@ -59,7 +59,7 @@ data "aws_subnet" "selected" {
 }
 
 resource "aws_iam_instance_profile" "this" {
-  count = var.iam_role_name != "" ? 1 : 0
+  count = var.attach_iam_role ? 1 : 0
   name  = "${local.name_prefix}-profile"
   role  = var.iam_role_name
 }

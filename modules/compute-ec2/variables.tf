@@ -69,3 +69,9 @@ variable "ami_id" {
   type        = string
   default     = ""
 }
+
+variable "attach_iam_role" {
+  description = "Whether to attach an IAM role to this instance"
+  type        = bool
+  default     = false
+}

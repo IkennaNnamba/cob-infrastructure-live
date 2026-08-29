@@ -26,6 +26,7 @@ module "web_server" {
   purpose     = "web-server"
   subnet_id   = data.terraform_remote_state.platform_dev.outputs.private_subnet_ids[0]
 
+  attach_iam_role = true
   iam_role_name = module.web_server_role.role_name
 
   ingress_rules = [
