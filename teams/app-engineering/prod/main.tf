@@ -8,7 +8,7 @@ data "terraform_remote_state" "platform_prod" {
 }
 
 module "web_server_role" {
-  source          = "../../../modules/iam"
+  source          = "git::https://github.com/IkennaNnamba/cob-infrastructure-modules.git//modules/iam?ref=v1.0.0"
   team            = "app-engineering"
   environment     = "prod"
   role_name       = "web-server"
@@ -18,7 +18,7 @@ module "web_server_role" {
 }
 
 module "web_server" {
-  source        = "../../../modules/compute-ec2"
+  source        = "git::https://github.com/IkennaNnamba/cob-infrastructure-modules.git//modules/compute-ec2?ref=v1.0.0"
   team          = "app-engineering"
   environment   = "prod"
   purpose       = "web-server"
@@ -37,7 +37,7 @@ module "web_server" {
 }
 
 module "cob_orders_db" {
-  source = "../../../modules/relational-database"
+  source = "git::https://github.com/IkennaNnamba/cob-infrastructure-modules.git//modules/relational-database?ref=v1.0.0"
 
   team        = "app-engineering"
   environment = "prod"

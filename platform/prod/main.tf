@@ -1,5 +1,5 @@
 module "networking" {
-  source = "../../modules/networking"
+  source = "git::https://github.com/IkennaNnamba/cob-infrastructure-modules.git//modules/networking?ref=v1.0.0"
 
   team        = "platform"
   environment = "prod"
