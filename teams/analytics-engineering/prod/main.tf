@@ -8,7 +8,7 @@ data "terraform_remote_state" "data_engineering_prod" {
 }
 
 module "analyst_query_role" {
-  source          = "../../../modules/iam"
+  source          = "git::https://github.com/IkennaNnamba/cob-infrastructure-modules.git//modules/iam?ref=v1.0.0"
   team            = "analytics-engineering"
   environment     = "prod"
   role_name       = "athena-query-access"
