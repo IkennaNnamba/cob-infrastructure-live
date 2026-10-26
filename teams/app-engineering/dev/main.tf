@@ -15,7 +15,7 @@ module "web_server_role" {
   role_name       = "web-server"
   trusted_service = "ec2.amazonaws.com"
 
-  policy_statements = [ ]
+  policy_statements = []
 }
 
 module "web_server" {
@@ -27,7 +27,7 @@ module "web_server" {
   subnet_id   = data.terraform_remote_state.platform_dev.outputs.private_subnet_ids[0]
 
   attach_iam_role = true
-  iam_role_name = module.web_server_role.role_name
+  iam_role_name   = module.web_server_role.role_name
 
   ingress_rules = [
     {
