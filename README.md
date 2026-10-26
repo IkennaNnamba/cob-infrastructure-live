@@ -7,7 +7,7 @@ across engineering teams.
 
 - [`docs/architecture.md`](docs/architecture.md) - what COB is, the problem it
   solves, capabilities, and the architecture diagram
-- [`docs/modules/`](docs/modules/) - usage docs for each reusable module
+- [Module docs](https://github.com/IkennaNnamba/cob-infrastructure-modules/tree/main/docs/modules) - usage docs for each reusable module, kept in the modules repo
   (required inputs, outputs, example usage)
 - [`docs/decisions/`](docs/decisions/) - why things were built the way they
   were (ADRs), plus a running backlog of known gaps
@@ -15,7 +15,7 @@ across engineering teams.
 ## Repository layout
 
 ```
-modules/    - reusable Terraform modules (owned by Platform Engineering)
+# reusable modules live in the separate cob-infrastructure-modules repo, pinned by git tag
 platform/   - shared networking, one leaf per environment
 teams/      - each team's own infrastructure, one leaf per team per environment
 examples/   - a worked example showing how a team composes modules together

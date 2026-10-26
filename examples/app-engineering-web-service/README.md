@@ -64,7 +64,7 @@ A few things worth pointing out directly in this output:
 - The RDS security group's ingress rule shows `security_groups = (known after
   apply)` referencing the web server's SG - the membership-based access
   control described in
-  [the relational-database module docs](../../docs/modules/relational-database.md)
+  [the relational-database module docs](https://github.com/IkennaNnamba/cob-infrastructure-modules/blob/main/docs/modules/relational-database.md)
   resolving correctly.
 - `root_block_device { encrypted = true }` on the EC2 instance confirms the
   secure-by-default encryption is actually applied, not just present in code.
