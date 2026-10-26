@@ -7,7 +7,7 @@ AWS - not just a `plan` that looks right on paper.
 
 The `platform/dev` leaf calls `modules/networking` once, producing a VPC
 with public/private subnets across 2 AZs, a NAT gateway, and route tables -
-exactly as documented in [`docs/modules/networking.md`](../../docs/modules/networking.md).
+exactly as documented in [`docs/modules/networking.md`](https://github.com/IkennaNnamba/cob-infrastructure-modules/blob/main/docs/modules/networking.md).
 
 ## Terraform plan
 
