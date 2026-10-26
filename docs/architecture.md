@@ -23,7 +23,7 @@ graph TB
         VPCprod["VPC - prod<br/>10.56.0.0/16, Multi-AZ NAT"]
     end
 
-    subgraph Modules["Shared Modules (modules/)"]
+    subgraph Modules["Shared Modules (cob-infrastructure-modules repo)"]
         M1[networking]
         M2[iam]
         M3[object-storage]

@@ -8,18 +8,18 @@ data "terraform_remote_state" "platform_dev" {
 }
 
 module "web_server_role" {
-  source = "../../../modules/iam"
+  source = "git::https://github.com/IkennaNnamba/cob-infrastructure-modules.git//modules/iam?ref=v1.0.0"
 
   team            = "app-engineering"
   environment     = "dev"
   role_name       = "web-server"
   trusted_service = "ec2.amazonaws.com"
 
-  policy_statements = [ ]
+  policy_statements = []
 }
 
 module "web_server" {
-  source = "../../../modules/compute-ec2"
+  source = "git::https://github.com/IkennaNnamba/cob-infrastructure-modules.git//modules/compute-ec2?ref=v1.0.0"
 
   team        = "app-engineering"
   environment = "dev"
@@ -27,7 +27,7 @@ module "web_server" {
   subnet_id   = data.terraform_remote_state.platform_dev.outputs.private_subnet_ids[0]
 
   attach_iam_role = true
-  iam_role_name = module.web_server_role.role_name
+  iam_role_name   = module.web_server_role.role_name
 
   ingress_rules = [
     {
@@ -41,7 +41,7 @@ module "web_server" {
 }
 
 module "cob_orders_db" {
-  source = "../../../modules/relational-database"
+  source = "git::https://github.com/IkennaNnamba/cob-infrastructure-modules.git//modules/relational-database?ref=v1.0.0"
 
   team        = "app-engineering"
   environment = "dev"
