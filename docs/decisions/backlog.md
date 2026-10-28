@@ -72,3 +72,5 @@ here so they read as intentional trade-offs rather than oversights.
   Terraform >= 1.10). Left as-is since it's fully functional - migrating
   would mean removing the DynamoDB table and bumping the version constraint
   across every leaf.
+- Migrate state locking from DynamoDB (`dynamodb_table`, now deprecated) to S3-native `use_lockfile` across all leaves and the bootstrap stack. It needs a backend change and `terraform init -reconfigure` per leaf.
+- Apply roles use PowerUserAccess plus scoped IAM. Tighten to a least-privilege policy based on what each leaf actually creates.
