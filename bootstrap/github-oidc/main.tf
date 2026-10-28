@@ -11,8 +11,8 @@ locals {
   ]
 
   # Apply roles trust only jobs that run inside a specific GitHub Environment.
-  apply_dev_subjects  = [for l in var.leaves : "repo:${var.github_repo}:environment:${l}-dev"]
-  apply_prod_subjects = [for l in var.leaves : "repo:${var.github_repo}:environment:${l}-prod"]
+  apply_dev_subjects  = ["repo:${var.github_repo}:environment:dev"]
+  apply_prod_subjects = ["repo:${var.github_repo}:environment:prod"]
 
   ci_roles = {
     "cob-gha-plan"       = local.plan_subjects
