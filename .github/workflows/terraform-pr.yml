@@ -1,0 +1,57 @@
+name: Terraform PR
+
+# Run on every pull request that targets main
+on:
+  pull_request:
+    branches: [main]
+
+# The least access the workflow needs: read the repo, nothing else
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Check ${{ matrix.leaf }}
+    runs-on: ubuntu-latest
+
+    # One job per leaf, run in parallel. fail-fast false = keep going if one fails.
+    strategy:
+      fail-fast: false
+      matrix:
+        leaf:
+          - platform/dev
+          - platform/prod
+          - teams/analytics-engineering/dev
+          - teams/analytics-engineering/prod
+          - teams/app-engineering/dev
+          - teams/app-engineering/prod
+          - teams/data-engineering/dev
+          - teams/data-engineering/prod
+
+    steps:
+      # Download the repo code onto the runner
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      # Install Terraform
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.14.0"
+          terraform_wrapper: false
+
+      # Fails if the files are not formatted
+      - name: Format check
+        run: terraform fmt -check -diff
+        working-directory: ${{ matrix.leaf }}
+
+      # Download providers and modules. No backend, so no AWS login is needed.
+      # readonly = use exactly the versions in the committed lock file.
+      - name: Init
+        run: terraform init -backend=false -input=false -lockfile=readonly
+        working-directory: ${{ matrix.leaf }}
+
+      # Fails if the configuration is invalid
+      - name: Validate
+        run: terraform validate
+        working-directory: ${{ matrix.leaf }}
