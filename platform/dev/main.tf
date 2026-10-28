@@ -13,3 +13,6 @@ module "networking" {
   enable_nat_gateway = true
   single_nat_gateway = true
 }
+locals {
+        test   =   "x"
+}
