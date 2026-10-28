@@ -14,5 +14,5 @@ module "networking" {
   single_nat_gateway = true
 }
 locals {
-        test   =   "x"
+  test = "x"
 }
