@@ -15,9 +15,3 @@ variable "lock_table" {
   type        = string
   default     = "cob-terraform-locks"
 }
-
-variable "leaves" {
-  description = "Leaf names. Each one gets a <leaf>-dev and a <leaf>-prod GitHub Environment."
-  type        = list(string)
-  default     = ["platform", "app-engineering", "data-engineering", "analytics-engineering"]
-}
