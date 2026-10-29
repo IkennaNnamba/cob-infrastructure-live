@@ -6,13 +6,13 @@ locals {
 
   # The plan role is used by PR runs and by plan jobs on main. Neither runs in an environment.
   plan_subjects = [
-    "repo:${var.github_repo}:pull_request",
-    "repo:${var.github_repo}:ref:refs/heads/main",
+    "${var.github_subject_prefix}:pull_request",
+    "${var.github_subject_prefix}:ref:refs/heads/main",
   ]
 
   # Apply roles trust only jobs that run inside a specific GitHub Environment.
-  apply_dev_subjects  = ["repo:${var.github_repo}:environment:dev"]
-  apply_prod_subjects = ["repo:${var.github_repo}:environment:prod"]
+  apply_dev_subjects  = ["${var.github_subject_prefix}:environment:dev"]
+  apply_prod_subjects = ["${var.github_subject_prefix}:environment:prod"]
 
   ci_roles = {
     "cob-gha-plan"       = local.plan_subjects
