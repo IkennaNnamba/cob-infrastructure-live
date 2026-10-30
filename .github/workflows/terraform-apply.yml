@@ -1,0 +1,58 @@
+name: Terraform Apply
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  detect:
+    name: Find changed leaves
+    runs-on: ubuntu-latest
+    outputs:
+      leaves: "${{ steps.find.outputs.leaves }}"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: find
+        run: |
+          leaves=$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" \
+            | sed -nE 's#^(platform/(dev|prod)|teams/[^/]+/(dev|prod))/.*#\1#p' \
+            | sort -u | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          echo "leaves=$leaves" >> "$GITHUB_OUTPUT"
+
+  plan:
+    name: Plan ${{ matrix.leaf }}
+    needs: detect
+    if: "${{ needs.detect.outputs.leaves != '[]' }}"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        leaf: "${{ fromJson(needs.detect.outputs.leaves) }}"
+    concurrency:
+      group: terraform-${{ matrix.leaf }}
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: ${{ matrix.leaf }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_PLAN_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.14.0
+          terraform_wrapper: false
+      - run: terraform init -input=false -lockfile=readonly
+      - run: terraform plan -input=false -lock-timeout=5m -out=tfplan
+      - name: Save the plan to the private plans bucket
+        run: aws s3 cp tfplan "s3://${{ vars.PLANS_BUCKET }}/${{ github.sha }}/${{ matrix.leaf }}/tfplan"
