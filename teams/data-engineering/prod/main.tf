@@ -1,12 +1,12 @@
 module "datalake" {
-  source      = "git::https://github.com/IkennaNnamba/cob-infrastructure-modules.git//modules/object-storage?ref=v1.0.1"
+  source      = "git::https://github.com/IkennaNnamba/cob-infrastructure-modules.git//modules/object-storage?ref=v1.0.2"
   team        = "data-engineering"
   environment = "prod"
   purpose     = "datalake"
 }
 
 module "datalake_catalog" {
-  source             = "git::https://github.com/IkennaNnamba/cob-infrastructure-modules.git//modules/data-catalog?ref=v1.0.1"
+  source             = "git::https://github.com/IkennaNnamba/cob-infrastructure-modules.git//modules/data-catalog?ref=v1.0.2"
   team               = "data-engineering"
   environment        = "prod"
   purpose            = "datalake"
