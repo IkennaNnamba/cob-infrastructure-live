@@ -13,3 +13,6 @@ module "datalake_catalog" {
   source_bucket_name = module.datalake.bucket_name
   source_bucket_arn  = module.datalake.bucket_arn
 }
+output "broken" {
+  value = module.datalake.does_not_exist
+}
