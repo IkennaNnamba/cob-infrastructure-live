@@ -1,0 +1,143 @@
+name: Terraform PR
+
+# Run on every pull request that targets main
+on:
+  pull_request:
+    branches: [main]
+
+# The least access the workflow needs: read the repo, nothing else
+permissions:
+  contents: read
+
+jobs:
+  # ---------- Job 1: format + validate every leaf (no AWS login needed) ----------
+  checks:
+    name: Check ${{ matrix.leaf }}
+    runs-on: ubuntu-latest
+
+    # One job per leaf, run in parallel. fail-fast false = keep going if one fails.
+    strategy:
+      fail-fast: false
+      matrix:
+        leaf:
+          - platform/dev
+          - platform/prod
+          - teams/analytics-engineering/dev
+          - teams/analytics-engineering/prod
+          - teams/app-engineering/dev
+          - teams/app-engineering/prod
+          - teams/data-engineering/dev
+          - teams/data-engineering/prod
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.14.0"
+          terraform_wrapper: false
+
+      - name: Format check
+        run: terraform fmt -check -diff
+        working-directory: ${{ matrix.leaf }}
+
+      - name: Init
+        run: terraform init -backend=false -input=false -lockfile=readonly
+        working-directory: ${{ matrix.leaf }}
+
+      - name: Validate
+        run: terraform validate
+        working-directory: ${{ matrix.leaf }}
+
+  # ---------- Job 2: work out which leaves this PR changed ----------
+  detect:
+    name: Find changed leaves
+    runs-on: ubuntu-latest
+    outputs:
+      leaves: ${{ steps.find.outputs.leaves }}
+
+    steps:
+      # fetch-depth 0 = download full history so git can compare against main
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # List changed files, keep only leaf folders, turn the list into JSON
+      - name: Find changed leaves
+        id: find
+        run: |
+          leaves=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD" \
+            | sed -nE 's#^(platform/(dev|prod)|teams/[^/]+/(dev|prod))/.*#\1#p' \
+            | sort -u \
+            | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          echo "leaves=$leaves" >> "$GITHUB_OUTPUT"
+          echo "Changed leaves: $leaves"
+
+  # ---------- Job 3: plan each changed leaf and comment it on the PR ----------
+  plan:
+    name: Plan ${{ matrix.leaf }}
+    needs: detect
+    # Skip when no leaf changed (an empty matrix would be an error)
+    if: needs.detect.outputs.leaves != '[]'
+    runs-on: ubuntu-latest
+
+    # id-token: write lets the job ask GitHub for the OIDC token used to log in to AWS
+    # pull-requests: write lets the job post a comment
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        leaf: ${{ fromJson(needs.detect.outputs.leaves) }}
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      # Log in to AWS as the read-only plan role. No access keys involved.
+      - name: Log in to AWS (plan role)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_PLAN_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.14.0"
+          terraform_wrapper: false
+
+      # Real backend this time, because plan needs to read the state
+      - name: Init
+        run: terraform init -input=false -lockfile=readonly
+        working-directory: ${{ matrix.leaf }}
+
+      - name: Plan
+        run: terraform plan -input=false -lock-timeout=5m -no-color -out=tfplan
+        working-directory: ${{ matrix.leaf }}
+
+      # Turn the saved plan into readable text (sensitive values are hidden)
+      - name: Show plan as text
+        run: terraform show -no-color tfplan > plan.txt
+        working-directory: ${{ matrix.leaf }}
+
+      - name: Comment the plan on the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "### Terraform plan for \`${{ matrix.leaf }}\`"
+            echo
+            echo '```'
+            head -c 60000 plan.txt
+            echo
+            echo '```'
+          } > comment.md
+          gh pr comment ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --body-file comment.md
+        working-directory: ${{ matrix.leaf }}

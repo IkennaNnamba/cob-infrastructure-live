@@ -1,0 +1,184 @@
+name: Terraform Apply
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      leaf:
+        description: Leaf to plan and apply (use this to re-run with no changes)
+        type: choice
+        required: true
+        options:
+          - platform/dev
+          - platform/prod
+          - teams/analytics-engineering/dev
+          - teams/analytics-engineering/prod
+          - teams/app-engineering/dev
+          - teams/app-engineering/prod
+          - teams/data-engineering/dev
+          - teams/data-engineering/prod
+
+permissions:
+  contents: read
+
+jobs:
+  detect:
+    name: Find changed leaves
+    runs-on: ubuntu-latest
+    outputs:
+      leaves: ${{ steps.find.outputs.leaves }}
+      dev: ${{ steps.find.outputs.dev }}
+      prod: ${{ steps.find.outputs.prod }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: find
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT_LEAF: ${{ inputs.leaf }}
+          BEFORE: ${{ github.event.before }}
+          SHA: ${{ github.sha }}
+        run: |
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            leaves=$(jq -n -c --arg l "$INPUT_LEAF" '[$l]')
+          else
+            leaves=$(git diff --name-only "$BEFORE" "$SHA" \
+              | sed -nE 's#^(platform/(dev|prod)|teams/[^/]+/(dev|prod))/.*#\1#p' \
+              | sort -u | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          fi
+          echo "leaves=$leaves" >> "$GITHUB_OUTPUT"
+          echo "dev=$(echo "$leaves" | jq -c 'map(select(endswith("/dev")))')" >> "$GITHUB_OUTPUT"
+          echo "prod=$(echo "$leaves" | jq -c 'map(select(endswith("/prod")))')" >> "$GITHUB_OUTPUT"
+
+  plan:
+    name: Plan ${{ matrix.leaf }}
+    needs: detect
+    if: needs.detect.outputs.leaves != '[]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        leaf: ${{ fromJson(needs.detect.outputs.leaves) }}
+    concurrency:
+      group: terraform-${{ matrix.leaf }}
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: ${{ matrix.leaf }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_PLAN_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.14.0
+          terraform_wrapper: false
+      - run: terraform init -input=false -lockfile=readonly
+      - run: terraform plan -input=false -lock-timeout=5m -out=tfplan
+      - name: Show the plan in the run summary
+        run: |
+          {
+            echo "### Plan: ${{ matrix.leaf }}"
+            echo '```'
+            terraform show -no-color tfplan | head -c 60000
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Save the plan to the private plans bucket
+        run: aws s3 cp tfplan "s3://${{ vars.PLANS_BUCKET }}/${{ github.sha }}/${{ matrix.leaf }}/tfplan"
+
+  apply-dev:
+    name: Apply ${{ matrix.leaf }}
+    needs: [detect, plan]
+    if: needs.detect.outputs.dev != '[]' && needs.plan.result == 'success'
+    runs-on: ubuntu-latest
+    environment: dev
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        leaf: ${{ fromJson(needs.detect.outputs.dev) }}
+    concurrency:
+      group: terraform-${{ matrix.leaf }}
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: ${{ matrix.leaf }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.14.0
+          terraform_wrapper: false
+      - run: terraform init -input=false -lockfile=readonly
+      - name: Fetch the saved plan
+        run: aws s3 cp "s3://${{ vars.PLANS_BUCKET }}/${{ github.sha }}/${{ matrix.leaf }}/tfplan" tfplan
+      - name: Apply the saved plan
+        run: terraform apply -input=false -lock-timeout=5m tfplan
+
+  apply-prod:
+    name: Apply ${{ matrix.leaf }}
+    needs: [detect, plan, apply-dev]
+    if: ${{ !cancelled() && needs.detect.outputs.prod != '[]' && needs.plan.result == 'success' && needs.apply-dev.result != 'failure' }}
+    runs-on: ubuntu-latest
+    environment: prod
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        leaf: ${{ fromJson(needs.detect.outputs.prod) }}
+    concurrency:
+      group: terraform-${{ matrix.leaf }}
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: ${{ matrix.leaf }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.14.0
+          terraform_wrapper: false
+      - run: terraform init -input=false -lockfile=readonly
+      - name: Fetch the saved plan
+        run: aws s3 cp "s3://${{ vars.PLANS_BUCKET }}/${{ github.sha }}/${{ matrix.leaf }}/tfplan" tfplan
+      - name: Apply the saved plan
+        run: terraform apply -input=false -lock-timeout=5m tfplan
+
+  report:
+    name: Deployment report
+    needs: [detect, plan, apply-dev, apply-prod]
+    if: ${{ always() && needs.detect.outputs.leaves != '[]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write the result and fail if anything failed
+        run: |
+          {
+            echo "### Deployment report"
+            echo "- Plan: ${{ needs.plan.result }}"
+            echo "- Apply dev: ${{ needs.apply-dev.result }}"
+            echo "- Apply prod: ${{ needs.apply-prod.result }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ contains(needs.*.result, 'failure') }}" = "true" ]; then
+            echo "Deployment FAILED" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "Deployment finished without failures" >> "$GITHUB_STEP_SUMMARY"
