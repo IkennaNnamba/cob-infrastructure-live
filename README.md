@@ -36,4 +36,4 @@ docs/       - everything above
 cd teams/<team>/<environment>
 terraform init
 terraform plan
-```
+```CI pipeline test run update
