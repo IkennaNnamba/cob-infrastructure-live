@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  # ---------- Job 1: format + validate every leaf (no AWS login needed) ----------
+  #Job 1: format + validate every leaf (no AWS login needed)
   checks:
     name: Check ${{ matrix.leaf }}
     runs-on: ubuntu-latest
@@ -51,7 +51,7 @@ jobs:
         run: terraform validate
         working-directory: ${{ matrix.leaf }}
 
-  # ---------- Job 2: work out which leaves this PR changed ----------
+  #Job 2: work out which leaves this PR changed
   detect:
     name: Find changed leaves
     runs-on: ubuntu-latest
@@ -76,7 +76,7 @@ jobs:
           echo "leaves=$leaves" >> "$GITHUB_OUTPUT"
           echo "Changed leaves: $leaves"
 
-  # ---------- Job 3: plan each changed leaf and comment it on the PR ----------
+  #Job 3: plan each changed leaf and comment it on the PR
   plan:
     name: Plan ${{ matrix.leaf }}
     needs: detect
