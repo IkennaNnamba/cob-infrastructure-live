@@ -3,6 +3,11 @@ module "datalake" {
   team        = "data-engineering"
   environment = "dev"
   purpose     = "datalake"
+
+  # Added for Scenario A pipeline validation test
+  tags = {
+    TestScenario = "valid-change-v1.0.2"
+  }
 }
 
 module "datalake_catalog" {
