@@ -5,8 +5,8 @@ module "datalake" {
   purpose     = "datalake"
 
   tags = {
-  TestScenario = "self-review-prod-v1.0.2"
-}
+    TestScenario = "self-review-prod-v1.0.2"
+  }
 }
 
 module "datalake_catalog" {
