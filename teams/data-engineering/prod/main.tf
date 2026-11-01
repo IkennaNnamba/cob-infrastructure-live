@@ -3,6 +3,10 @@ module "datalake" {
   team        = "data-engineering"
   environment = "prod"
   purpose     = "datalake"
+
+  tags = {
+    TestScenario = "self-review-prod-v1.0.2"
+  }
 }
 
 module "datalake_catalog" {
