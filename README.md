@@ -37,3 +37,4 @@ cd teams/<team>/<environment>
 terraform init
 terraform plan
 ```CI pipeline test run update
+CI test post-rename
